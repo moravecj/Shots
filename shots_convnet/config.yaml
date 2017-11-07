@@ -1,0 +1,24 @@
+dataset:
+  class: datasets.ShotsDataset
+  data_root: 'C:/CXFLOW/Dataset'
+
+model:
+  name: ShotsExample
+  class: shots_convnet.ShotsConvNet
+
+  optimizer:
+    class: AdamOptimizer
+    learning_rate: 0.001
+
+  inputs: [images, labels]
+  outputs: [loss]
+
+main_loop:
+  extra_streams: [test]
+
+hooks:
+  - ComputeStats:
+      variables: [loss]
+  - LogVariables
+  - StopAfter:
+      epochs: 0
