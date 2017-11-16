@@ -30,15 +30,6 @@ class ShotsDataset(cx.BaseDataset):
 
             if self._frame == self._batch_size - 2:
                 self._frame = self._frame + 1
-                """
-                for i in range(0, self._batch_size):
-                    for j in range(0, self._num_of_frames):
-                        im = self._images[i, :, :, j, :]
-                        im2 = cv2.resize(im, (320, 320))
-                        cv2.imshow('fig1',  im2)
-                        print(self._labels[i, j])
-                        cv2.waitKey(0)
-                """
                 return True
             self._frame = self._frame + 1
 
@@ -103,9 +94,7 @@ class ShotsDataset(cx.BaseDataset):
 
     def train_stream(self) -> cx.Stream:
         self._frame = -self._num_of_frames
-        self._train = self._perm[:20]
-
-        videos_done = 0
+        self._train = self._perm[:80]
 
         pom_labels = copy.deepcopy(self._labels_dir)
 
@@ -118,7 +107,6 @@ class ShotsDataset(cx.BaseDataset):
         pom_labels[x].pop(s)
         if len(pom_labels[x]) == 0:
             self._train = np.delete(self._train, index)
-            videos_done = videos_done + 1
 
         cap = cv2.VideoCapture(self._videos_dir[x])
 
@@ -133,8 +121,8 @@ class ShotsDataset(cx.BaseDataset):
                 buf = cv2.resize(buf, (self._size_of_pictures, self._size_of_pictures))
 
                 if self.__add_image_and_label_to_batch(buf, 0):
+                    print(self._images.shape, ' ', self._labels.shape)
                     yield {'images': self._images, 'labels': self._labels}
-                    print('Learning Done')
 
                 idx = idx + 1
             elif shot[0] + idx == shot[1]:
@@ -143,16 +131,11 @@ class ShotsDataset(cx.BaseDataset):
                 fr1 = cv2.resize(fr1, (self._size_of_pictures, self._size_of_pictures))
                 if random.random() > 0.1:
                     if self.__add_image_and_label_to_batch(fr1, 1):
+                        print(self._images.shape, ' ', self._labels.shape)
                         yield {'images': self._images, 'labels': self._labels}
-                        print('Learning Done')
 
                     idx = idx + 1
                 else:
-                    """
-                    x = random.choice([j for j in self._train if j not in [x]])
-                    x = random.choice(self._train)
-                    s = random.randint(0, len(self._labels_dir[x]) - 1)
-                    """
                     if len(self._train) == 0:
                         break
 
@@ -162,13 +145,11 @@ class ShotsDataset(cx.BaseDataset):
 
                     shot = pom_labels[x][s]
                     shot[1] = shot[0] + min(shot[1] - shot[0], self._max_shot_length)
-                    #print(self._max_shot_length, ' ', shot[0], ' ', shot[1])
 
                     pom_labels[x].pop(s)
 
                     if len(pom_labels[x]) == 0:
                         self._train = np.delete(self._train, index)
-                        videos_done = videos_done + 1
 
                     idx = 0
 
@@ -185,17 +166,13 @@ class ShotsDataset(cx.BaseDataset):
                         dst = cv2.resize(dst, (self._size_of_pictures, self._size_of_pictures))
                         if IN < 3 or IN >= self._length_of_fadein - 2:
                             if self.__add_image_and_label_to_batch(dst, 0):
+                                print(self._images.shape, ' ', self._labels.shape)
                                 yield {'images': self._images, 'labels': self._labels}
-                                print('Learning Done')
                         else:
                             if self.__add_image_and_label_to_batch(dst, 1):
+                                print(self._images.shape, ' ', self._labels.shape)
                                 yield {'images': self._images, 'labels': self._labels}
-                                print('Learning Done')
             else:
-                """
-                x = random.choice([j for j in self._train if j not in [x]])
-                s = random.randint(0, len(self._labels_dir[x]) - 1)
-                """
                 if len(self._train) == 0:
                     break
 
@@ -210,7 +187,6 @@ class ShotsDataset(cx.BaseDataset):
 
                 if len(pom_labels[x]) == 0:
                     self._train = np.delete(self._train, index)
-                    videos_done = videos_done + 1
 
                 idx = 0
 
@@ -219,11 +195,9 @@ class ShotsDataset(cx.BaseDataset):
                 print(self.__number_of_shots_left(pom_labels), ' START: ',  shot[0], ' END: ', shot[1])
 
     def test_stream(self) -> cx.Stream:
-
         self._frame = -self._num_of_frames
-
         self._test = self._perm[80:]
-
+        
         pom_labels = copy.deepcopy(self._labels_dir)
 
         index = random.randint(0, len(self._test) - 1)
@@ -313,6 +287,3 @@ class ShotsDataset(cx.BaseDataset):
 
                 cap.release()
                 cap = cv2.VideoCapture(self._videos_dir[x])
-
-    #def test_stream(self) -> cx.Stream:
-    #def download(self) -> None:

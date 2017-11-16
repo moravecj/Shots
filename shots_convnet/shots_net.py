@@ -32,5 +32,5 @@ class ShotsConvNet(cxtf.BaseModel):
 
         loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits)
         tf.identity(loss, name='loss')
-        predictions = tf.greater_equal(logits, 0.7, name='predictions')
+        predictions = tf.greater_equal(logits, 0.5, name='predictions')
         tf.reduce_mean(tf.cast(tf.equal(predictions, tf.cast(labels, tf.bool)), tf.float32), 1, name='accuracy')

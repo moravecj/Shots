@@ -20,5 +20,7 @@ hooks:
   - ComputeStats:
       variables: [loss, accuracy]
   - LogVariables
+  - SaveBest:
+      stream: test
   - StopAfter:
-      epochs: 1
+      epochs: 2
