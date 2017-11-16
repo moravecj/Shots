@@ -7,7 +7,14 @@ import copy
 
 
 class ShotsDataset(cx.BaseDataset):
+    def __number_of_shots_left(self, lbls) -> int:
+        count = 0
+        for i in self._train:
+            count += len(lbls[i])
+        return count
+
     def __add_image_and_label_to_batch(self, img, lab) -> bool:
+        #print(self._frame)
         img = np.array(img, dtype=np.float32)
         img /= 255
         if 0 <= self._frame < self._batch_size - 1:
@@ -76,7 +83,7 @@ class ShotsDataset(cx.BaseDataset):
             idx = idx + 1
 
     def _configure_dataset(self, data_root='Dataset', batch_size: int=50, num_of_frames: int=32,
-                           length_of_fadein: int = 10, **kwargs) -> None:
+                           length_of_fadein: int = 10, size_of_pictures: int = 32, **kwargs) -> None:
         self._batch_size = batch_size
         self._data_root = data_root
         self._data = {}
@@ -86,16 +93,17 @@ class ShotsDataset(cx.BaseDataset):
         self.__read_labels()
         self._num_of_frames = num_of_frames
         self._frame = -self._num_of_frames
-        self._images = np.zeros((self._batch_size, 32, 32, self._num_of_frames, 3), dtype=np.float32)
+        self._size_of_pictures = size_of_pictures
+        self._images = np.zeros((self._batch_size, self._size_of_pictures, self._size_of_pictures, self._num_of_frames, 3), dtype=np.float32)
         self._labels = np.zeros((self._batch_size, self._num_of_frames), dtype=np.float32)
         self._count_in_batch = self._batch_size * self._num_of_frames
         self._length_of_fadein = length_of_fadein
         self._perm = np.random.permutation(len(self._labels_dir))
-        self._max_shot_length = 100
+        self._max_shot_length = 10
 
     def train_stream(self) -> cx.Stream:
         self._frame = -self._num_of_frames
-        self._train = self._perm[:80]
+        self._train = self._perm[:20]
 
         videos_done = 0
 
@@ -106,40 +114,37 @@ class ShotsDataset(cx.BaseDataset):
         s = random.randint(0, len(pom_labels[x]) - 1)
 
         shot = pom_labels[x][s]
-        shot[1] = min(shot[1], self._max_shot_length)
+        shot[1] = shot[0] + min(shot[1] - shot[0], self._max_shot_length)
         pom_labels[x].pop(s)
         if len(pom_labels[x]) == 0:
             self._train = np.delete(self._train, index)
             videos_done = videos_done + 1
-            print('Done video: ', videos_done)
 
         cap = cv2.VideoCapture(self._videos_dir[x])
 
         idx = 0
         i = 0
         while True:
-            if i % 10000 == 0:
-                print(i)
+            print("Frame: ", i)
             i = i + 1
             if shot[0] + idx < shot[1]:
                 cap.set(1, shot[0] + idx)
                 ret, buf = cap.read()
-                buf = cv2.resize(buf, (32, 32))
-                #self.__add_image_and_label(buf, 0)
+                buf = cv2.resize(buf, (self._size_of_pictures, self._size_of_pictures))
 
                 if self.__add_image_and_label_to_batch(buf, 0):
                     yield {'images': self._images, 'labels': self._labels}
+                    print('Learning Done')
 
                 idx = idx + 1
             elif shot[0] + idx == shot[1]:
                 cap.set(1, shot[0] + idx)
                 ret, fr1 = cap.read()
-                fr1 = cv2.resize(fr1, (32, 32))
+                fr1 = cv2.resize(fr1, (self._size_of_pictures, self._size_of_pictures))
                 if random.random() > 0.1:
-                    #self.__add_image_and_label(fr1, 1)
-
                     if self.__add_image_and_label_to_batch(fr1, 1):
                         yield {'images': self._images, 'labels': self._labels}
+                        print('Learning Done')
 
                     idx = idx + 1
                 else:
@@ -154,35 +159,38 @@ class ShotsDataset(cx.BaseDataset):
                     index = random.randint(0, len(self._train) - 1)
                     x = self._train[index]
                     s = random.randint(0, len(pom_labels[x]) - 1)
-                    shot[1] = min(shot[1], self._max_shot_length)
+
                     shot = pom_labels[x][s]
+                    shot[1] = shot[0] + min(shot[1] - shot[0], self._max_shot_length)
+                    #print(self._max_shot_length, ' ', shot[0], ' ', shot[1])
 
                     pom_labels[x].pop(s)
 
                     if len(pom_labels[x]) == 0:
                         self._train = np.delete(self._train, index)
                         videos_done = videos_done + 1
-                        print('Done video: ', videos_done)
 
                     idx = 0
 
+                    cap.release()
                     cap = cv2.VideoCapture(self._videos_dir[x])
+                    print(self.__number_of_shots_left(pom_labels), ' START: ', shot[0], ' END: ', shot[1])
 
                     cap.set(1, shot[0] + idx)
                     ret, fr2 = cap.read()
-                    fr2 = cv2.resize(fr2, (32, 32))
+                    fr2 = cv2.resize(fr2, (self._size_of_pictures, self._size_of_pictures))
                     for IN in range(0, self._length_of_fadein):
                         fadein = IN / float(self._length_of_fadein)
                         dst = cv2.addWeighted(fr1, 1 - fadein, fr2, fadein, 0)
-                        dst = cv2.resize(dst, (32, 32))
+                        dst = cv2.resize(dst, (self._size_of_pictures, self._size_of_pictures))
                         if IN < 3 or IN >= self._length_of_fadein - 2:
-                            #self.__add_image_and_label(dst, 0)
                             if self.__add_image_and_label_to_batch(dst, 0):
                                 yield {'images': self._images, 'labels': self._labels}
+                                print('Learning Done')
                         else:
-                            #self.__add_image_and_label(dst, 1)
                             if self.__add_image_and_label_to_batch(dst, 1):
                                 yield {'images': self._images, 'labels': self._labels}
+                                print('Learning Done')
             else:
                 """
                 x = random.choice([j for j in self._train if j not in [x]])
@@ -196,21 +204,22 @@ class ShotsDataset(cx.BaseDataset):
                 s = random.randint(0, len(pom_labels[x]) - 1)
 
                 shot = pom_labels[x][s]
-                shot[1] = min(shot[1], self._max_shot_length)
+                shot[1] = shot[0] + min(shot[1] - shot[0], self._max_shot_length)
 
                 pom_labels[x].pop(s)
 
                 if len(pom_labels[x]) == 0:
                     self._train = np.delete(self._train, index)
                     videos_done = videos_done + 1
-                    print('Done video: ', videos_done)
-
 
                 idx = 0
 
+                cap.release()
                 cap = cv2.VideoCapture(self._videos_dir[x])
+                print(self.__number_of_shots_left(pom_labels), ' START: ',  shot[0], ' END: ', shot[1])
 
     def test_stream(self) -> cx.Stream:
+
         self._frame = -self._num_of_frames
 
         self._test = self._perm[80:]
@@ -222,7 +231,7 @@ class ShotsDataset(cx.BaseDataset):
         s = random.randint(0, len(pom_labels[x]) - 1)
 
         shot = pom_labels[x][s]
-        shot[1] = min(shot[1], self._max_shot_length)
+        shot[1] = shot[0] + min(shot[1] - shot[0], self._max_shot_length)
 
         pom_labels[x].pop(s)
         if len(pom_labels[x]) == 0:
@@ -231,18 +240,21 @@ class ShotsDataset(cx.BaseDataset):
         cap = cv2.VideoCapture(self._videos_dir[x])
 
         idx = 0
-        for i in range(0, self._count - self._num_of_frames):
+        i = 0
+        while True:
+            print("Frame: ", i)
+            i = i + 1
             if shot[0] + idx < shot[1]:
                 cap.set(1, shot[0] + idx)
                 ret, buf = cap.read()
-                buf = cv2.resize(buf, (32, 32))
+                buf = cv2.resize(buf, (self._size_of_pictures, self._size_of_pictures))
                 if self.__add_image_and_label_to_batch(buf, 0):
                     yield {'images': self._images, 'labels': self._labels}
                 idx = idx + 1
             elif shot[0] + idx == shot[1]:
                 cap.set(1, shot[0] + idx)
                 ret, fr1 = cap.read()
-                fr1 = cv2.resize(fr1, (32, 32))
+                fr1 = cv2.resize(fr1, (self._size_of_pictures, self._size_of_pictures))
                 if random.random() > 0.1:
                     if self.__add_image_and_label_to_batch(fr1, 1):
                         yield {'images': self._images, 'labels': self._labels}
@@ -256,7 +268,7 @@ class ShotsDataset(cx.BaseDataset):
                     s = random.randint(0, len(pom_labels[x]) - 1)
 
                     shot = pom_labels[x][s]
-                    shot[1] = min(shot[1], self._max_shot_length)
+                    shot[1] = shot[0] + min(shot[1] - shot[0], self._max_shot_length)
 
                     pom_labels[x].pop(s)
                     if len(pom_labels[x]) == 0:
@@ -264,14 +276,18 @@ class ShotsDataset(cx.BaseDataset):
 
                     idx = 0
 
+                    cap.release()
                     cap = cv2.VideoCapture(self._videos_dir[x])
 
                     cap.set(1, shot[0] + idx)
                     ret, fr2 = cap.read()
-                    fr2 = cv2.resize(fr2, (32, 32))
+                    fr2 = cv2.resize(fr2, (self._size_of_pictures, self._size_of_pictures))
                     for IN in range(0, self._length_of_fadein):
                         fadein = IN / float(self._length_of_fadein)
                         dst = cv2.addWeighted(fr1, 1 - fadein, fr2, fadein, 0)
+                        dst = cv2.resize(dst, (self._size_of_pictures, self._size_of_pictures))
+                        #if self.__add_image_and_label_to_batch(dst, int(IN < 3 or IN >= self._length_of_fadein - 2)):
+                        #    yield {'images': self._images, 'labels': self._labels}
                         if IN < 3 or IN >= self._length_of_fadein - 2:
                             if self.__add_image_and_label_to_batch(dst, 0):
                                 yield {'images': self._images, 'labels': self._labels}
@@ -287,7 +303,7 @@ class ShotsDataset(cx.BaseDataset):
                 s = random.randint(0, len(pom_labels[x]) - 1)
 
                 shot = pom_labels[x][s]
-                shot[1] = min(shot[1], self._max_shot_length)
+                shot[1] = shot[0] + min(shot[1] - shot[0], self._max_shot_length)
 
                 pom_labels[x].pop(s)
                 if len(pom_labels[x]) == 0:
@@ -295,6 +311,8 @@ class ShotsDataset(cx.BaseDataset):
 
                 idx = 0
 
+                cap.release()
                 cap = cv2.VideoCapture(self._videos_dir[x])
+
     #def test_stream(self) -> cx.Stream:
     #def download(self) -> None:

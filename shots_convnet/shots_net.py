@@ -21,12 +21,7 @@ class ShotsConvNet(cxtf.BaseModel):
             net = K.layers.Conv3D(32, 3)(net)
             net = K.layers.MaxPool3D()(net)
         with tf.variable_scope('conv2'):
-            #net = tf.expand_dims(images, -1)
             net = K.layers.Conv3D(64, 3)(net)
-            net = K.layers.MaxPool3D()(net)
-        with tf.variable_scope('conv3'):
-            #net = tf.expand_dims(images, -1)
-            net = K.layers.Conv3D(128, 3)(net)
             net = K.layers.MaxPool3D()(net)
         with tf.variable_scope('dense4'):
             net = K.layers.Flatten()(net)
@@ -37,9 +32,5 @@ class ShotsConvNet(cxtf.BaseModel):
 
         loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits)
         tf.identity(loss, name='loss')
-        #acc = tf.cast(tf.div(tf.reduce_sum(tf.cast(tf.equal(logits, labels),tf.float32)), 32.0), tf.float32)
-        #tf.identity(acc, name='accuracy')
-        #tf.tuple(tf.divide(tf.reduce_sum(tf.cast(tf.equal(logits, labels), tf.float32)), 32.0), name='accuracy')
-        #accuracy = tf.metrics.accuracy(predictions=logits, labels=labels, name='accuracy')
-        #tf.identity(accuracy, name='accuracy')
-
+        predictions = tf.greater_equal(logits, 0.7, name='predictions')
+        tf.reduce_mean(tf.cast(tf.equal(predictions, tf.cast(labels, tf.bool)), tf.float32), 1, name='accuracy')

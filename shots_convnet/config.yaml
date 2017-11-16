@@ -11,14 +11,14 @@ model:
     learning_rate: 0.001
 
   inputs: [images, labels]
-  outputs: [loss]
+  outputs: [loss, accuracy, predictions]
 
 main_loop:
   extra_streams: [test]
 
 hooks:
   - ComputeStats:
-      variables: [loss]
+      variables: [loss, accuracy]
   - LogVariables
   - StopAfter:
-      epochs: 0
+      epochs: 1
