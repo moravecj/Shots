@@ -11,8 +11,6 @@ class ShotsConvNet(cxtf.BaseModel):
     def _create_model(self, **kwargs):
         logging.debug('Constructing placeholders matching the model.inputs')
 
-        sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
-
         images = tf.placeholder(dtype=tf.float32, shape=[None, 32, 32, 32, 3], name='images')
         labels = tf.placeholder(dtype=tf.float32, shape=[None, 32], name='labels')
 
