@@ -15,6 +15,7 @@ model:
 
 main_loop:
   extra_streams: [test]
+  skip_zeroth_epoch: true
 
 hooks:
   - ComputeStats:
