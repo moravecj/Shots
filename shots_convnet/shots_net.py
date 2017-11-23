@@ -6,7 +6,6 @@ import tensorflow.contrib.keras as K
 import numpy as np
 
 class ShotsConvNet(cxtf.BaseModel):
-    """Simple 2-layered MLP for majority task."""
 
     def flatten3D(self, inputs: tf.Tensor) -> tf.Tensor:
         """
