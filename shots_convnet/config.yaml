@@ -5,23 +5,42 @@ dataset:
 model:
   name: ShotsExample
   class: shots_convnet.ShotsConvNet
+  n_gpus: 1
 
   optimizer:
     class: AdamOptimizer
     learning_rate: 0.001
 
   inputs: [images, labels]
-  outputs: [loss, accuracy, predictions]
+  outputs: [loss, frame_accuracy, predictions, sequence_accuracy, f1, precision, recall]
+  restore_fallback: cxflow_tensorflow.BaseModel
 
 main_loop:
   extra_streams: [test]
   skip_zeroth_epoch: true
+  buffer: 4
 
 hooks:
+  - ShowProgress
   - ComputeStats:
-      variables: [loss, accuracy]
+      variables:
+        - loss
+        - f1 : [nanmean, nanfraction]
+        - frame_accuracy
+        - sequence_accuracy
+        - precision : [nanmean, nanfraction]
+        - recall : [nanmean, nanfraction]
   - LogVariables
-  - SaveBest:
-      stream: test
+  - LogProfile
+  - SaveLatest
   - StopAfter:
-      epochs: 2
+      epochs: 50
+  - cxflow_tensorflow.hooks.WriteTensorBoard
+predict:
+  model:
+    inputs: [images]
+    outputs: [predictions]
+  hooks:
+    - shots_convnet.ShotsPredict
+    - ShowProgress
+    - LogProfile
