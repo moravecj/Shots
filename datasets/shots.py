@@ -61,8 +61,8 @@ class ShotsDataset(cx.BaseDataset):
         img = np.array(img, dtype=np.float32)
         img /= 255
 
-        if lab == 0 and random.random() < 0.1:
-            img = img + random.uniform(0, 0.3)
+        #if lab == 0 and random.random() < 0.1:
+        #    img = img + random.uniform(0, 0.3)
 
         if self._frame == self._batch_size:
             self.__fill_vectors_from_frame(0)
@@ -134,7 +134,6 @@ class ShotsDataset(cx.BaseDataset):
                            length_of_fadein: int = 10, size_of_pictures: int = 32, **kwargs) -> None:
         self._batch_size = batch_size
         self._data_root = data_root
-        self._data = {}
         self._videos_dir = [f.path for f in os.scandir(os.path.join(data_root, 'TRECVidSubset100')) if f.is_file()]
         self._labels_dir = []
         self._count = 0
@@ -145,7 +144,7 @@ class ShotsDataset(cx.BaseDataset):
         self._images = np.zeros((self._batch_size, self._num_of_frames, self._size_of_pictures, self._size_of_pictures, 3), dtype=np.float32)
         self._labels = np.zeros((self._batch_size, self._num_of_frames), dtype=np.int64)
         self._count_in_batch = self._batch_size * self._num_of_frames
-        self._length_of_fadein = length_of_fadein
+        self._length_of_fadein = 50
         self._perm = np.random.permutation(len(self._labels_dir))
         self._max_shot_length = 30
         self._black_frame = np.zeros((self._size_of_pictures, self._size_of_pictures, 3), dtype=np.uint8)
@@ -214,9 +213,9 @@ class ShotsDataset(cx.BaseDataset):
                         cap.set(1, shot[0] + idx)
                         ret, fr2 = cap.read()
                         fr2 = cv2.resize(fr2, (self._size_of_pictures, self._size_of_pictures))
-                        self._length_of_fadein = random.randint(10, 20)
-                        for IN in range(0, self._length_of_fadein):
-                            fadein = IN / float(self._length_of_fadein)
+                        length_of_fadein = random.randint(10, self._length_of_fadein)
+                        for IN in range(0, length_of_fadein):
+                            fadein = IN / float(length_of_fadein)
                             dst = cv2.addWeighted(self._black_frame, 1 - fadein, fr2, fadein, 0)
                             dst = cv2.resize(dst, (self._size_of_pictures, self._size_of_pictures))
                             if self.__add_image_and_label_to_batch(dst, 1):
@@ -227,9 +226,9 @@ class ShotsDataset(cx.BaseDataset):
                         yield {'images': self._images, 'labels': self._labels}
 
                     idx = idx + 1
-                    self._length_of_fadein = random.randint(10, 20)
-                    for IN in range(1, self._length_of_fadein + 1):
-                        fadein = IN / float(self._length_of_fadein)
+                    length_of_fadein = random.randint(10, self._length_of_fadein)
+                    for IN in range(1, length_of_fadein + 1):
+                        fadein = IN / float(length_of_fadein)
                         dst = cv2.addWeighted(fr1, 1 - fadein, self._black_frame, fadein, 0)
                         dst = cv2.resize(dst, (self._size_of_pictures, self._size_of_pictures))
 
@@ -248,9 +247,9 @@ class ShotsDataset(cx.BaseDataset):
                     cap.set(1, shot[0] + idx)
                     ret, fr2 = cap.read()
                     fr2 = cv2.resize(fr2, (self._size_of_pictures, self._size_of_pictures))
-                    self._length_of_fadein = random.randint(10, 20)
-                    for IN in range(0, self._length_of_fadein + 1):
-                        fadein = IN / float(self._length_of_fadein)
+                    length_of_fadein = random.randint(10, self._length_of_fadein)
+                    for IN in range(0, length_of_fadein + 1):
+                        fadein = IN / float(length_of_fadein)
                         dst = cv2.addWeighted(fr1, 1 - fadein, fr2, fadein, 0)
                         dst = cv2.resize(dst, (self._size_of_pictures, self._size_of_pictures))
                         if self.__add_image_and_label_to_batch(dst, 1):
@@ -326,9 +325,9 @@ class ShotsDataset(cx.BaseDataset):
                         cap.set(1, shot[0] + idx)
                         ret, fr2 = cap.read()
                         fr2 = cv2.resize(fr2, (self._size_of_pictures, self._size_of_pictures))
-                        self._length_of_fadein = random.randint(10, 20)
-                        for IN in range(0, self._length_of_fadein):
-                            fadein = IN / float(self._length_of_fadein)
+                        length_of_fadein = random.randint(10, self._length_of_fadein)
+                        for IN in range(0, length_of_fadein):
+                            fadein = IN / float(length_of_fadein)
                             dst = cv2.addWeighted(self._black_frame, 1 - fadein, fr2, fadein, 0)
                             dst = cv2.resize(dst, (self._size_of_pictures, self._size_of_pictures))
                             if self.__add_image_and_label_to_batch(dst, 1):
@@ -340,9 +339,9 @@ class ShotsDataset(cx.BaseDataset):
                         yield {'images': self._images, 'labels': self._labels}
 
                     idx = idx + 1
-                    self._length_of_fadein = random.randint(10, 20)
-                    for IN in range(1, self._length_of_fadein + 1):
-                        fadein = IN / float(self._length_of_fadein)
+                    length_of_fadein = random.randint(10, self._length_of_fadein)
+                    for IN in range(1, length_of_fadein + 1):
+                        fadein = IN / float(length_of_fadein)
                         dst = cv2.addWeighted(fr1, 1 - fadein, self._black_frame, fadein, 0)
                         dst = cv2.resize(dst, (self._size_of_pictures, self._size_of_pictures))
 
@@ -363,9 +362,9 @@ class ShotsDataset(cx.BaseDataset):
                     cap.set(1, shot[0] + idx)
                     ret, fr2 = cap.read()
                     fr2 = cv2.resize(fr2, (self._size_of_pictures, self._size_of_pictures))
-                    self._length_of_fadein = random.randint(10, 20)
-                    for IN in range(0, self._length_of_fadein + 1):
-                        fadein = IN / float(self._length_of_fadein)
+                    length_of_fadein = random.randint(10, self._length_of_fadein)
+                    for IN in range(0, length_of_fadein + 1):
+                        fadein = IN / float(length_of_fadein)
                         dst = cv2.addWeighted(fr1, 1 - fadein, fr2, fadein, 0)
                         dst = cv2.resize(dst, (self._size_of_pictures, self._size_of_pictures))
                         if self.__add_image_and_label_to_batch(dst, 1):
@@ -383,20 +382,28 @@ class ShotsDataset(cx.BaseDataset):
 
 
     def predict_stream(self) -> cx.Stream:
-        file = '25011'
+        file = '23553'
 
         cap = cv2.VideoCapture('D:/RAIDataset/video_rai/' + file + '.mp4')
         fc = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        cap.release()
 
         idx = 0
         start = time.time()
+        bid = 0
         while idx < fc:
-            # vybirani framu z videi v RAIDatasetu on demand je hrozne pomale, proto jsem si je predzpracoval do .bmp
             buf = cv2.imread('D:/RAIDataset/video_rai/' + file + '/' + str(idx) + '.bmp')
+            #cap.set(1, idx)
+            #ret, buf = cap.read()
+            #buf = cv2.resize(buf,(32,32))
 
             if self.__add_image_only(buf):
-                yield {'images': self._images}
+                img = copy.deepcopy(self._images[0, 0, :, :, :])
+                img *= 255
+                cv2.imwrite('D:/outPy/' + str(bid) + 'a.bmp', img)
+
+                yield {'images': self._images, 'id': str(bid)}
+                bid += 1
+
             idx += 1
 
         end = time.time()
