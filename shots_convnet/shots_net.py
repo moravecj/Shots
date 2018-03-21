@@ -25,19 +25,35 @@ class ShotsConvNet(cxtf.BaseModel):
 
         with tf.variable_scope('conv1'):
             net = images
-            net = K.layers.Conv3D(8, (5, 3, 3), padding='same')(net)
-            net = K.layers.MaxPool3D((1, 2, 2))(net)
+            #net = K.layers.Conv3D(8, (5, 3, 3), padding='same')(net)
+            conv1 = K.layers.Conv3D(6, (3, 3, 3), padding='same')(net)
+            conv2 = K.layers.Conv3D(6, (3, 3, 3), padding='same', dilation_rate=(2, 1, 1))(net)
+            conv3 = K.layers.Conv3D(6, (3, 3, 3), padding='same', dilation_rate=(4, 1, 1))(net)
+            net = tf.concat([conv1, conv2, conv3], axis=4)
+            net = K.layers.MaxPool3D((1, 2, 2))(net)                    #1x3x3, stride 2
             logging.info(net.shape)
         with tf.variable_scope('conv2'):
-            net = K.layers.Conv3D(16, (5, 3, 3), padding='same')(net)
+            #net = K.layers.Conv3D(16, (5, 3, 3), padding='same')(net)
+            conv1 = K.layers.Conv3D(12, (3, 3, 3), padding='same')(net)
+            conv2 = K.layers.Conv3D(12, (3, 3, 3), padding='same', dilation_rate=(2, 1, 1))(net)
+            conv3 = K.layers.Conv3D(12, (3, 3, 3), padding='same', dilation_rate=(4, 1, 1))(net)
+            net = tf.concat([conv1, conv2, conv3], axis=4)
             net = K.layers.MaxPool3D((1, 2, 2))(net)
             logging.info(net.shape)
         with tf.variable_scope('conv3'):
-            net = K.layers.Conv3D(32, (5, 3, 3), padding='same')(net)
+            #net = K.layers.Conv3D(32, (5, 3, 3), padding='same')(net)
+            conv1 = K.layers.Conv3D(24, (3, 3, 3), padding='same')(net)
+            conv2 = K.layers.Conv3D(24, (3, 3, 3), padding='same', dilation_rate=(2, 1, 1))(net)
+            conv3 = K.layers.Conv3D(24, (3, 3, 3), padding='same', dilation_rate=(4, 1, 1))(net)
+            net = tf.concat([conv1, conv2, conv3], axis=4)
             net = K.layers.MaxPool3D((1, 2, 2))(net)
             logging.info(net.shape)
         with tf.variable_scope('conv4'):
-            net = K.layers.Conv3D(64, (5, 3, 3), padding='same')(net)
+            #net = K.layers.Conv3D(64, (5, 3, 3), padding='same')(net)
+            conv1 = K.layers.Conv3D(48, (3, 3, 3), padding='same')(net)
+            conv2 = K.layers.Conv3D(48, (3, 3, 3), padding='same', dilation_rate=(2, 1, 1))(net)
+            conv3 = K.layers.Conv3D(48, (3, 3, 3), padding='same', dilation_rate=(4, 1, 1))(net)
+            net = tf.concat([conv1, conv2, conv3], axis=4)
             net = K.layers.MaxPool3D((1, 2, 2))(net)
             logging.info(net.shape)
         with tf.device('/cpu:0'):
@@ -53,6 +69,7 @@ class ShotsConvNet(cxtf.BaseModel):
         loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
         tf.identity(loss, name='loss')
         predictions = tf.argmax(logits, 2, name='predictions')
+        tf.identity(logits, name='predictionsRaw')
         tf.reduce_mean(tf.cast(tf.equal(predictions, labels), tf.float32), 1, name='frame_accuracy')
         tf.cast(tf.greater_equal(tf.reduce_sum(tf.cast(tf.equal(predictions, labels), tf.float32), 1), 100), dtype=tf.float32, name='sequence_accuracy')
         sts = cxtf.metrics.bin_stats(predictions, labels)
